@@ -3,8 +3,6 @@ import numpy as np
 TIME_STEP = 0.1  # s
 TIME_HORIZON = 10  # steps
 
-K = int(TIME_HORIZON / TIME_STEP)
-
 
 def RK4(x_curr: np.ndarray, u_curr: np.ndarray, func):
 
