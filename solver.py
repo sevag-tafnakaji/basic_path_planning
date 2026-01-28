@@ -1,4 +1,4 @@
-from misc import RK4, TIME_HORIZON, TIME_STEP
+from misc import RK4, calculate_arc_length, TIME_HORIZON, TIME_STEP
 
 import casadi as ca
 import numpy as np
@@ -31,11 +31,8 @@ def cost_function(x: np.ndarray, u: np.ndarray):
 
 def solve(x0, xf, constraints, eps=1e-4, delta=1e-3):
 
-    X = np.hstack((x0[0:2], xf[0:2]))
-
-    cost_scale = 0  # expected length of arc between points (i.e. distance between points)
-    for k in range(1, X.shape[1]):
-        cost_scale += np.linalg.norm(X[:2, k] - X[:2, k - 1])
+    # expected length of arc between points (i.e. distance between points)
+    cost_scale = calculate_arc_length(np.hstack((x0[0:2], xf[0:2])))
 
     num_steps = int(TIME_HORIZON / TIME_STEP)
 
@@ -58,7 +55,7 @@ def solve(x0, xf, constraints, eps=1e-4, delta=1e-3):
 
         opti.subject_to(x[:, k + 1] == RK4(x[:, k], u[:, k], system))
 
-        state_cost_k = ca.sqrt( (x[0, k+1] - x[0, k])**2 + (x[1, k+1] - x[1, k])**2 + eps)
+        state_cost_k = ca.sqrt((x[0, k+1] - x[0, k])**2 + (x[1, k+1] - x[1, k])**2 + eps)
         control_cost_k = delta*(u[0, k]**2 + u[1, k]**2)
 
         cost += (state_cost_k + control_cost_k) / (cost_scale)

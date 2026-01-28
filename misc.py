@@ -4,6 +4,13 @@ TIME_STEP = 0.1  # s
 TIME_HORIZON = 10  # steps
 
 
+def calculate_arc_length(x):
+    arc_length = 0
+    for k in range(1, x.shape[1]):
+        arc_length += np.linalg.norm(x[:2, k] - x[:2, k - 1])
+    return arc_length
+
+
 def RK4(x_curr: np.ndarray, u_curr: np.ndarray, func):
 
     k1 = func(x_curr, u_curr)
