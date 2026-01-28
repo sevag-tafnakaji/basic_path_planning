@@ -29,12 +29,31 @@ def cost_function(x: np.ndarray, u: np.ndarray):
     return state_cost + control_cost
 
 
-def solve(x0, xf, constraints, eps=1e-4, delta=1e-3):
+def get_initial_warm_start(x_init, x_target):
+    num_steps = int(ca.floor(TIME_HORIZON / TIME_STEP))
+
+    x1_warm = np.linspace(x_init[0][0], x_target[0][0], num_steps + 1)
+    x2_warm = np.linspace(x_init[1][0], x_target[1][0], num_steps + 1)
+    x3_warm = np.linspace(0, 0, num_steps + 1)
+
+    u1_warm = 0.1*np.ones(num_steps)
+    u2_warm = np.zeros(num_steps)
+
+    return {
+        'x1_warm': x1_warm,
+        'x2_warm': x2_warm,
+        'x3_warm': x3_warm,
+        'u1_warm': u1_warm,
+        'u2_warm': u2_warm
+    }
+
+
+def solve(x0, xf, constraints, warm_start, eps=1e-4, delta=1e-3):
 
     # expected length of arc between points (i.e. distance between points)
     cost_scale = calculate_arc_length(np.hstack((x0[0:2], xf[0:2])))
 
-    num_steps = int(TIME_HORIZON / TIME_STEP)
+    num_steps = int(ca.floor(TIME_HORIZON / TIME_STEP))
 
     u1_max = constraints['u1_max']
     u1_min = constraints['u1_min']
@@ -60,8 +79,6 @@ def solve(x0, xf, constraints, eps=1e-4, delta=1e-3):
 
         cost += (state_cost_k + control_cost_k) / (cost_scale)
 
-    # TODO: Add warm start here
-
     opti.subject_to(x[0, -1] == xf[0, -1])
     opti.subject_to(x[1, -1] == xf[1, -1])
 
@@ -75,6 +92,17 @@ def solve(x0, xf, constraints, eps=1e-4, delta=1e-3):
 
     opti.minimize(cost)
     opti.solver("ipopt", opts)
+
+    # Homopaty/warm start for better convergence
+    if warm_start is not None:
+        u_warm = np.vstack((warm_start['u1_warm'],
+                            warm_start['u2_warm']))
+        x_warm = np.vstack((warm_start['x1_warm'],
+                            warm_start['x2_warm'],
+                            warm_start['x3_warm']))
+
+        opti.set_initial(x, x_warm)
+        opti.set_initial(u, u_warm)
 
     solution = opti.solve()
 
